@@ -1,0 +1,17 @@
+﻿{
+    "name": "らいちゃんとおしゃべり",
+    "short_name": "らいチャット",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#ffcccc",
+    "icons": [
+        {
+            "src": "icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        }
+    ]
+
+}
