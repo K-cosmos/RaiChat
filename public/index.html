@@ -665,8 +665,7 @@
                                 messages: requestMessages
                             })
                         });
-                        const result = await response.json();
-
+                        
                         if (!response.ok) throw new Error(`OpenAI API error: ${response.statusText}`);
 
                         const data = await response.json();
@@ -1120,15 +1119,10 @@ ${data.results.map(r => `・${r.title}\n${r.snippet}`).join("\n\n")}`;
             try {
                 let response;
                 try {
-                    response = await fetch(`https://raichan-chat.jp.ngrok.io/reminders/${id}`, {
-                        method: 'DELETE',
-                    });
-                    if (!response.ok) throw new Error();
+                    res = await fetch(endpoint); // ← これだけでいい！
+                    if (!res.ok) throw new Error();
                 } catch {
-                    console.warn('Ngrokで削除できなかったため、localhostへフォールバック');
-                    response = await fetch(`http://localhost:3000/reminders/${id}`, {
-                        method: 'DELETE',
-                    });
+                    console.warn('API取得に失敗したよ〜💦', endpoint);
                 }
 
                 if (response.ok) {
@@ -1297,9 +1291,6 @@ ${data.results.map(r => `・${r.title}\n${r.snippet}`).join("\n\n")}`;
                 imageElement.style.height = 'auto';
                 imageElement.style.borderRadius = '10px';
 
-                // モーダルを開くイベント
-                imageElement.addEventListener('click', () => showImageModal(message));
-
                 bubble.appendChild(imageElement);
             } else {
                 bubble.innerHTML = message; // テキストはHTMLで表示
@@ -1318,11 +1309,10 @@ ${data.results.map(r => `・${r.title}\n${r.snippet}`).join("\n\n")}`;
             let res;
 
             try {
-                res = await fetch(`https://raichan-chat.jp.ngrok.io${endpoint}`);
+                res = await fetch(endpoint); // ← これだけでいい！
                 if (!res.ok) throw new Error();
             } catch {
-                console.warn('Ngrokから取得できなかったため、localhostへフォールバック');
-                res = await fetch(`http://localhost:3000${endpoint}`);
+                console.warn('API取得に失敗したよ〜💦', endpoint);
             }
 
             const text = await res.text();

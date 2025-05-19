@@ -44,8 +44,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions)); // 全てのOPTIONSリクエストに対応（重要）
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
@@ -156,12 +156,34 @@ app.post('/api/chat', async (req, res) => {
 
 // Vision APIリレー
 app.post('/api/vision', async (req, res) => {
-    const response = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${process.env.VISION_API_KEY}`, {
-        method: "POST",
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(req.body)
-    });
-    res.json(await response.json());
+    try {
+        const image = req.body.image;
+        if (!image) {
+            return res.status(400).json({ error: '画像がないよ！' });
+        }
+
+        const apiKey = process.env.VISION_API_KEY;
+
+        const visionRes = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                requests: [
+                    {
+                        image: { content: image },
+                        features: [{ type: 'LABEL_DETECTION' }]
+                    }
+                ]
+            })
+        });
+
+        const data = await visionRes.json();
+        const labels = data.responses?.[0]?.labelAnnotations?.map(label => label.description) || [];
+        res.json({ labels });
+    } catch (err) {
+        console.error('Vision APIエラー:', err);
+        res.status(500).json({ error: 'Vision APIにアクセスできなかったよ…' });
+    }
 });
 
 // 翻訳リレー
@@ -317,34 +339,28 @@ setInterval(async () => {
 }, 10000);
 
 // ----- Googleカレンダー連携 -----
-const TOKEN_PATH = path.join(__dirname, 'token.json');
-const CREDENTIALS_PATH = path.join(__dirname, 'credentials.json');
-
+// Google OAuth クライアントを作成する関数
 function createOAuth2Client() {
-    const credentials = JSON.parse(fs.readFileSync(CREDENTIALS_PATH));
-    const { client_secret, client_id, redirect_uris } = credentials.installed;
-    return new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
+    return new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        process.env.GOOGLE_REDIRECT_URI
+    );
 }
 
-function authorize(callback) {
-    const credentials = JSON.parse(fs.readFileSync(CREDENTIALS_PATH));
-    const { client_secret, client_id, redirect_uris } = credentials.installed;
+// .env から読み込んだトークンで認証する関数
+function authorize() {
+    const oAuth2Client = createOAuth2Client();
 
-    const oauth2Client = new google.auth.OAuth2(
-        GOOGLE_CLIENT_ID,
-        GOOGLE_CLIENT_SECRET,
-        GOOGLE_REDIRECT_URI
-    );
+    oAuth2Client.setCredentials({
+        access_token: process.env.ACCESS_TOKEN,
+        refresh_token: process.env.REFRESH_TOKEN,
+        scope: process.env.SCOPE,
+        token_type: process.env.TOKEN_TYPE,
+        expiry_date: Number(process.env.EXPIRY_DATE)
+    });
 
-    // token.json が存在するかチェック
-    if (fs.existsSync(TOKEN_PATH)) {
-        const token = JSON.parse(fs.readFileSync(TOKEN_PATH));
-        oAuth2Client.setCredentials(token);
-        callback(oAuth2Client);
-    } else {
-        console.log('❗token.json が見つかりません。まず認証を完了してください。');
-        callback(null);  // 認証なしでコールバック
-    }
+    return oAuth2Client;
 }
 
 function getFormattedEvents(auth, date, callback) {
@@ -383,27 +399,29 @@ function getFormattedEvents(auth, date, callback) {
 
 // 今日の予定
 app.get('/today-events', (req, res) => {
-    authorize((auth) => {
-        if (!auth) {
-            res.send('🔒 Googleカレンダーにまだ認証されてないよ！/auth で認証してね！');
-            return;
-        }
+    try {
+        const auth = authorize();
         const today = new Date();
         getFormattedEvents(auth, today, (result) => {
             res.send(result);
         });
-    });
+    } catch (err) {
+        res.send('🔒 Googleカレンダーにまだ認証されてないかも！/auth で認証してみてね！');
+    }
 });
 
 // 明日の予定
 app.get('/tomorrow-events', (req, res) => {
-    authorize((auth) => {
+    try {
+        const auth = authorize();
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         getFormattedEvents(auth, tomorrow, (result) => {
             res.send(result);
         });
-    });
+    } catch (err) {
+        res.send('🔒 Googleカレンダーにまだ認証されてないかも！/auth で認証してみてね！');
+    }
 });
 
 const oauth2Client = new google.auth.OAuth2(
