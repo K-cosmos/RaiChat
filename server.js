@@ -5,13 +5,17 @@ const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 const GOOGLE_CSE_ID = process.env.GOOGLE_CSE_ID;
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const OPENAI_API_KEY_DRAW = process.env.OPENAI_API_KEY_DRAW;
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN;
 const apiKey = GOOGLE_API_KEY;
 const cx = GOOGLE_CSE_ID;
+
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const VISION_API_KEY = process.env.VISION_API_KEY;
+const TRANSLATE_API_KEY = process.env.TRANSLATE_API_KEY;
 
 const express = require('express');
 const { google } = require('googleapis');
@@ -129,7 +133,46 @@ app.post('/synthesis', async (req, res) => {
         res.status(500).json({ error: 'Server error occurred during synthesis' });
     }
 });
+// 公開していい設定
+app.get('/config', (req, res) => {
+    res.json({
+        FRONTEND_ORIGIN: process.env.FRONTEND_ORIGIN,
+        vapidPublicKey: process.env.VAPID_PUBLIC_KEY
+    });
+});
 
+// OpenAIリレー
+app.post('/api/chat', async (req, res) => {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+        },
+        body: JSON.stringify(req.body)
+    });
+    res.json(await response.json());
+});
+
+// Vision APIリレー
+app.post('/api/vision', async (req, res) => {
+    const response = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${process.env.VISION_API_KEY}`, {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req.body)
+    });
+    res.json(await response.json());
+});
+
+// 翻訳リレー
+app.post('/api/translate', async (req, res) => {
+    const response = await fetch(`https://translation.googleapis.com/language/translate/v2?key=${process.env.TRANSLATE_API_KEY}`, {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req.body)
+    });
+    res.json(await response.json());
+});
 
 // ----- ミドルウェア -----
 app.use(cors());
@@ -389,19 +432,21 @@ app.get('/oauth2callback', async (req, res) => {
     }
 });
 
+// 認証ルート
 app.get('/auth', (req, res) => {
-    const credentials = JSON.parse(fs.readFileSync(CREDENTIALS_PATH));
-    const { client_secret, client_id, redirect_uris } = credentials.installed;
+    const client_id = process.env.GOOGLE_CLIENT_ID;
+    const client_secret = process.env.GOOGLE_CLIENT_SECRET;
+    const redirect_uri = process.env.GOOGLE_REDIRECT_URI;
 
-    const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
+    const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uri);
 
-    const authUrl = oauth2Client.generateAuthUrl({
+    const authUrl = oAuth2Client.generateAuthUrl({
         access_type: 'offline',
         scope: ['https://www.googleapis.com/auth/calendar.readonly'],
-        redirect_uri: "https://raichan-chat.jp.ngrok.io/oauth2callback" // ←これを明示！
+        redirect_uri: "https://raichan-chat.jp.ngrok.io/oauth2callback" // 必要に応じて明示
     });
 
-    res.redirect(authUrl); // Googleの認証画面へリダイレクト
+    res.redirect(authUrl);
 });
 
 // お絵描き機能
@@ -419,7 +464,7 @@ app.post('/draw', async (req, res) => {
             },
             {
                 headers: {
-                    'Authorization': `Bearer ${OPENAI_API_KEY}`,
+                    'Authorization': `Bearer ${OPENAI_API_KEY_DRAW}`,
                     'Content-Type': 'application/json'
                 }
             }
