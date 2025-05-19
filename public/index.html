@@ -496,15 +496,10 @@
         let shiritoriTimeout = null;
         let shiritoriWarningTimeout = null;
         let config = {};
-        let FRONTEND_ORIGIN = '';
 
         async function init() {
             const res = await fetch('/config');
             config = await res.json();
-            window.FRONTEND_ORIGIN = config.FRONTEND_ORIGIN;
-
-            // 他にinitで呼びたい関数をここで呼ぶ
-            // 例: fetchVoiceVoxAudioを使う関数やUIセットアップなど
         }
 
         // メッセージを送信する関数
@@ -590,7 +585,7 @@
                 // サーバーに登録
                 try {
                     // Ngrokサーバーに接続を試みる
-                    response = await await fetch(`${FRONTEND_ORIGIN}/reminders`, {
+                    response = await fetch('/reminders', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -991,7 +986,7 @@ ${data.results.map(r => `・${r.title}\n${r.snippet}`).join("\n\n")}`;
             // 新しいリマインダーを送信
             try {
                 // Ngrok サーバーに接続を試みる
-                response = await fetch(`${FRONTEND_ORIGIN}/reminders`, {
+                response = await fetch('/reminders', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1081,7 +1076,7 @@ ${data.results.map(r => `・${r.title}\n${r.snippet}`).join("\n\n")}`;
                 console.log('リマインダーを取得中...');
                 let res;
                 try {
-                    res = await fetch(`${FRONTEND_ORIGIN}/reminders`);
+                    res = await fetch('/reminders');
                     if (!res.ok) throw new Error();
                 } catch {
                     console.warn('Ngrokから取得できなかったため、localhostへフォールバック');
@@ -1183,13 +1178,12 @@ ${data.results.map(r => `・${r.title}\n${r.snippet}`).join("\n\n")}`;
         // ===== 音声取得と再生関連 =====
         // VOICEVOXからBlob音声を取得する関数
         async function fetchVoiceVoxAudio(text, isUser = false) {
-            console.log('fetchVoiceVoxAudio:', window.FRONTEND_ORIGIN);
             const speakerId = isUser ? 2 : 8; // ユーザーなら2、らいちゃんなら8
 
             try {
                 // 音声合成用クエリ作成
                 const queryRes = await fetch(
-                    `${FRONTEND_ORIGIN}/audio_query?text=${encodeURIComponent(text)}&speaker=${speakerId}`,
+                    `/audio_query?text=${encodeURIComponent(text)}&speaker=${speakerId}`,
                     {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -1200,7 +1194,7 @@ ${data.results.map(r => `・${r.title}\n${r.snippet}`).join("\n\n")}`;
 
                 // 音声合成してBlob取得
                 const synthRes = await fetch(
-                    `${FRONTEND_ORIGIN}/synthesis?speaker=${speakerId}`,
+                    `/synthesis?speaker=${speakerId}`,
                     {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },

@@ -9,7 +9,6 @@ const OPENAI_API_KEY_DRAW = process.env.OPENAI_API_KEY_DRAW;
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
-const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN;
 const apiKey = GOOGLE_API_KEY;
 const cx = GOOGLE_CSE_ID;
 
@@ -36,7 +35,7 @@ const qs = require('querystring'); // ← 追加！
 
 // CORS対応の強化版（OPTIONSにも対応）
 const corsOptions = {
-    origin: FRONTEND_ORIGIN,
+    origin: true,
     methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: ['Content-Type'],
 };
@@ -136,7 +135,6 @@ app.post('/synthesis', async (req, res) => {
 // 公開していい設定
 app.get('/config', (req, res) => {
     res.json({
-        FRONTEND_ORIGIN: process.env.FRONTEND_ORIGIN,
         vapidPublicKey: process.env.VAPID_PUBLIC_KEY
     });
 });
@@ -251,7 +249,7 @@ webpush.setVapidDetails(
 
 // 公開鍵をクライアントに返す
 app.get('/vapidPublicKey', (req, res) => {
-    res.send(vapidKeys.publicKey);
+    res.send(VAPID_PUBLIC_KEY);
 });
 
 // ----- リマインダー機能 -----
