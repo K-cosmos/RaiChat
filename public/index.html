@@ -1301,16 +1301,17 @@ ${data.results.map(r => `・${r.title}\n${r.snippet}`).join("\n\n")}`;
         async function getCalendarEvents(type) {
             const endpoint = type === '今日' ? '/today-events' : '/tomorrow-events';
             let res;
-
+        
             try {
-                res = await fetch(endpoint); // ← これだけでいい！
+                res = await fetch(endpoint);
                 if (!res.ok) throw new Error();
-            } catch {
-                console.warn('API取得に失敗したよ〜💦', endpoint);
+        
+                const text = await res.text();  // ← ここに移動！
+                return text;
+            } catch (err) {
+                console.warn('API取得に失敗したよ〜💦', endpoint, err);
+                return '予定の取得に失敗しちゃったよ💦';
             }
-
-            const text = await res.text();
-            return text;
         }
 
         // 承認コード入力待ち用
