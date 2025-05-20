@@ -91,7 +91,7 @@ app.get('/audio_query', async (req, res) => {
         }
 
         const response = await axios.post(
-            `http://localhost:50021/audio_query?text=${encodeURIComponent(text)}&speaker=${speaker}`,
+            `https://voicevox-vvoq.onrender.com/audio_query?text=${encodeURIComponent(text)}&speaker=${speaker}`,
             {}, // POSTなのにボディなし！VoiceVox仕様
             { headers: { 'Content-Type': 'application/json' } }
         );
@@ -114,7 +114,7 @@ app.post('/synthesis', async (req, res) => {
         }
 
         const synthesisResponse = await axios.post(
-            `http://localhost:50021/synthesis?speaker=${speaker}`,
+            `https://voicevox-vvoq.onrender.com/synthesis?speaker=${speaker}`,
             req.body,
             {
                 headers: { 'Content-Type': 'application/json' },
